@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: exam-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: MONGO_URI
+        value: ""
+      - key: JWT_SECRET
+        value: ""
