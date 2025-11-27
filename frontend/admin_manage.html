@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manage Exams</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container mt-5">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">Online Exam</a>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto" id="nav-links"></ul>
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <span class="navbar-text me-3" id="userNameDisplay"></span>
+          </li>
+          <li class="nav-item">
+            <button class="btn btn-outline-danger" id="logoutBtn" onclick="logout()" style="display: none;">Logout</button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <h2>Manage Exams</h2>
+  <table class="table table-bordered">
+    <thead>
+      <tr><th>Title</th><th>Duration</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="examTableBody"></tbody>
+  </table>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    const userName = localStorage.getItem('userName');
+
+    if (!token || role !== 'admin') {
+      alert("Access Denied");
+      window.location.href = "login.html";
+    }
+
+    document.getElementById("userNameDisplay").innerText = `Welcome, ${userName}`;
+    document.getElementById("logoutBtn").style.display = "inline-block";
+
+    fetch('/api/exams', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(exams => {
+        const table = document.getElementById('examTableBody');
+        exams.forEach(exam => {
+          table.innerHTML += `
+            <tr>
+              <td>${exam.title}</td>
+              <td>${exam.duration} min</td>
+              <td>
+                <button class="btn btn-primary btn-sm" onclick="editExam('${exam._id}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteExam('${exam._id}')">Delete</button>
+              </td>
+            </tr>
+          `;
+        });
+      });
+
+    function editExam(id) {
+      window.location.href = `admin_edit_exam.html?examId=${id}`;
+    }
+
+    function deleteExam(id) {
+      if (confirm("Are you sure to delete this exam?")) {
+        fetch(`/api/exams/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+          alert(data.message || "Exam deleted");
+          location.reload();
+        });
+      }
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "login.html";
+    }
+  </script>
+</body>
+</html>

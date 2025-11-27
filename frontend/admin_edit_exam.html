@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Exam</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container mt-5">
+  <h2>Edit Exam</h2>
+  <form id="examForm">
+    <input type="text" class="form-control mb-2" id="title" placeholder="Exam Title" required>
+    <input type="text" class="form-control mb-2" id="subject" placeholder="Subject">
+    <input type="number" class="form-control mb-2" id="duration" placeholder="Duration (minutes)" required>
+    <input type="number" class="form-control mb-2" id="totalMarks" placeholder="Total Marks">
+    <div class="mb-2">
+      <input type="url" class="form-control" id="formLink" placeholder="Google Form Link">
+      <div class="mt-2 d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary" onclick="openGoogleForm()">Create Google Form</button>
+        <button type="button" class="btn btn-outline-primary" onclick="pasteFormLink()">Paste Link from Clipboard</button>
+      </div>
+    </div>
+
+    <h4>Questions</h4>
+    <div id="questions"></div>
+    <button type="button" class="btn btn-secondary mb-3" onclick="addQuestion()">+ Add Question</button><br>
+    <button type="submit" class="btn btn-success">Update Exam</button>
+  </form>
+
+<script>
+let questions = [];
+const examId = new URLSearchParams(window.location.search).get('examId');
+const token = localStorage.getItem('token');
+
+fetch(`/api/exams/${examId}`, {
+  headers: { 'Authorization': `Bearer ${token}` }
+})
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById('title').value = data.title;
+    document.getElementById('subject').value = data.subject || '';
+    document.getElementById('duration').value = data.duration;
+    document.getElementById('totalMarks').value = data.totalMarks || '';
+    document.getElementById('formLink').value = data.formLink || '';
+
+    data.questions.forEach((q, i) => {
+      addQuestion(q, i);
+    });
+  });
+
+function addQuestion(q = {}, index = questions.length) {
+  const html = `
+    <div class="border p-3 mb-3">
+      <input class="form-control mb-2" placeholder="Question Text" id="q${index}" value="${q.questionText || ''}" required>
+      <input class="form-control mb-1" placeholder="Option A" id="q${index}o0" value="${q.options?.[0] || ''}">
+      <input class="form-control mb-1" placeholder="Option B" id="q${index}o1" value="${q.options?.[1] || ''}">
+      <input class="form-control mb-1" placeholder="Option C" id="q${index}o2" value="${q.options?.[2] || ''}">
+      <input class="form-control mb-1" placeholder="Option D" id="q${index}o3" value="${q.options?.[3] || ''}">
+      <input class="form-control" type="number" min="0" max="3" id="q${index}correct" value="${q.correctAnswer || 0}">
+    </div>`;
+  document.getElementById('questions').innerHTML += html;
+  questions.push(index);
+}
+
+document.getElementById('examForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const title = document.getElementById('title').value;
+  const subject = document.getElementById('subject').value || undefined;
+  const duration = parseInt(document.getElementById('duration').value);
+  const totalMarks = document.getElementById('totalMarks').value ? parseInt(document.getElementById('totalMarks').value) : undefined;
+  const formLink = document.getElementById('formLink').value || undefined;
+  const questionsData = questions.map(i => ({
+    questionText: document.getElementById(`q${i}`).value,
+    options: [
+      document.getElementById(`q${i}o0`).value,
+      document.getElementById(`q${i}o1`).value,
+      document.getElementById(`q${i}o2`).value,
+      document.getElementById(`q${i}o3`).value
+    ],
+    correctAnswer: parseInt(document.getElementById(`q${i}correct`).value)
+  }));
+
+  fetch(`/api/exams/${examId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ title, subject, duration, totalMarks, formLink, questions: questionsData })
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert(data.message || "Exam updated");
+    window.location.href = "admin_manage.html";
+  });
+});
+
+function openGoogleForm() {
+  window.open('https://forms.new', '_blank');
+}
+
+async function pasteFormLink() {
+  try {
+    const text = await navigator.clipboard.readText();
+    document.getElementById('formLink').value = text.trim();
+  } catch (e) {
+    alert('Clipboard access denied. Please paste manually.');
+  }
+}
+</script>
+</body>
+</html>
